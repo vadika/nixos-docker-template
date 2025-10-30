@@ -1,0 +1,25 @@
+# Workspace directory
+workspace/
+
+# Environment file
+.env
+
+# Docker volumes
+nix-store/
+dev-home/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Nix
+result
+result-*
+.direnv/

@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile-
+.dockerignore
+
+# Environment
+.env
+.env.*
+
+# Workspace (will be mounted as volume)
+workspace/
+
+# Scripts (not needed in image)
+*.sh
+
+# Documentation
+README.md
+*.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

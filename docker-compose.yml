@@ -1,0 +1,65 @@
+services:
+  nixos-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nixos-dev-${COMPOSE_PROJECT_NAME:-ghaf-hostname-patch}
+    hostname: nixos-dev-${COMPOSE_PROJECT_NAME:-ghaf-hostname-patch}
+    
+    # Mount Docker socket to use host's Docker from inside container
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspace:/workspace
+      - nix-store:/nix
+      - dev-home:/home/dev
+      - ~/.ssh:/home/dev/.ssh:ro  # Mount SSH keys read-only for git
+    
+    # Keep container running
+    tty: true
+    stdin_open: true
+    
+    # Health check to ensure nix-daemon is running
+    healthcheck:
+      test: ["CMD", "/nix/var/nix/profiles/default/bin/nix", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Network configuration
+    ports:
+      - "2222:22"    # SSH (if you enable it)
+      - "8080:8080"  # Common dev port
+      - "3000:3000"  # Common dev port
+      - "5000:5000"  # Common dev port
+      - "8000:8000"  # Common dev port
+    
+    # Environment variables
+    environment:
+      - NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/nixos-24.05.tar.gz
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    
+    # Allow access to Docker socket
+    group_add:
+      - ${DOCKER_GID:-999}
+    
+    # Enable KVM support
+    devices:
+      - /dev/kvm:/dev/kvm
+    privileged: true
+    
+    # Resource limits (optional, adjust as needed)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 4G
+
+volumes:
+  nix-store:
+    driver: local
+  dev-home:
+    driver: local
