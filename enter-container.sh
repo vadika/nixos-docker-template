@@ -11,4 +11,4 @@ if ! docker ps | grep -q "nixos-dev-${COMPOSE_PROJECT_NAME}"; then
 fi
 
 echo "Entering NixOS development container..."
-docker compose exec --user dev nixos-dev /nix/var/nix/profiles/default/bin/bash --login
+docker compose exec --user dev nixos-dev /nix/var/nix/profiles/default/bin/bash -c "source ~/.bashrc && exec bash -i"

@@ -26,13 +26,6 @@ services:
       retries: 3
       start_period: 10s
     
-    # Network configuration
-    ports:
-      - "2222:22"    # SSH (if you enable it)
-      - "8080:8080"  # Common dev port
-      - "3000:3000"  # Common dev port
-      - "5000:5000"  # Common dev port
-      - "8000:8000"  # Common dev port
     
     # Environment variables
     environment:
