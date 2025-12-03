@@ -29,7 +29,7 @@ services:
     
     # Environment variables
     environment:
-      - NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/nixos-24.05.tar.gz
+      - NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/nixos-25.11.tar.gz
       - DOCKER_HOST=unix:///var/run/docker.sock
     
     # Allow access to Docker socket
