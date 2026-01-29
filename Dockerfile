@@ -14,7 +14,7 @@ RUN chown -R root:root /nix/store /nix/var && \
 
 
 # Install additional packages (base image already has bash, git, openssh, coreutils)
-RUN nix profile install \
+RUN nix profile install --profile /nix/var/nix/profiles/default \
     nixpkgs#util-linux \
     nixpkgs#shadow \
     nixpkgs#vim \
@@ -29,7 +29,16 @@ RUN nix profile install \
     nixpkgs#nixpkgs-fmt \
     nixpkgs#nil \
     nixpkgs#alejandra \
+    nixpkgs#gnused \
+    nixpkgs#ripgrep \
+    nixpkgs#sudo \
+    nixpkgs#linux-pam \
     nixpkgs#direnv
+
+# Ensure sudo is setuid root inside the Nix store
+RUN SUDO_BIN="$(readlink -f /nix/var/nix/profiles/default/bin/sudo)" && \
+    chown root:root "$SUDO_BIN" && \
+    chmod 4755 "$SUDO_BIN"
 
 
 # Set up a development user (minimal image doesn't have adduser/addgroup)
@@ -39,6 +48,20 @@ RUN mkdir -p /home/dev/.config/nix && \
     cp /etc/group /etc/group.tmp && rm /etc/group && mv /etc/group.tmp /etc/group && \
     echo "dev:x:1000:1000:Developer:/home/dev:/nix/var/nix/profiles/default/bin/bash" >> /etc/passwd && \
     echo "dev:x:1000:" >> /etc/group
+
+# Allow dev to use sudo without a password
+RUN mkdir -p /etc/sudoers.d && \
+    echo "Defaults secure_path=/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/usr/bin:/bin" > /etc/sudoers && \
+    echo "Defaults env_reset" >> /etc/sudoers && \
+    echo "#includedir /etc/sudoers.d" >> /etc/sudoers && \
+    echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev && \
+    chmod 0440 /etc/sudoers && \
+    chmod 0440 /etc/sudoers.d/dev
+
+# Minimal PAM config for sudo (allow all inside container)
+RUN mkdir -p /etc/pam.d /lib && \
+    ln -s /nix/var/nix/profiles/default/lib/security /lib/security && \
+    printf 'auth    sufficient pam_permit.so\naccount sufficient pam_permit.so\nsession sufficient pam_permit.so\n' > /etc/pam.d/sudo
 
 # Create per-user Nix directories
 RUN mkdir -p /nix/var/nix/profiles/per-user/dev && \
