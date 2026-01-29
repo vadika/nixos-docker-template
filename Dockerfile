@@ -31,6 +31,7 @@ RUN nix profile install --profile /nix/var/nix/profiles/default \
     nixpkgs#alejandra \
     nixpkgs#gnused \
     nixpkgs#ripgrep \
+    nixpkgs#gawk \
     nixpkgs#sudo \
     nixpkgs#linux-pam \
     nixpkgs#direnv
