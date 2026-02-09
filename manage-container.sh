@@ -1,24 +1,27 @@
 #!/bin/bash
 # Helper scripts for NixOS container management
 
-# Get the directory name for unique container naming
-export COMPOSE_PROJECT_NAME=$(basename "$PWD")
+set -e
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export COMPOSE_PROJECT_NAME="$(basename "$SCRIPT_DIR")"
+COMPOSE_CMD=(docker compose --project-directory "$SCRIPT_DIR")
 
 # Stop the container
 stop-container() {
     echo "Stopping NixOS development container..."
-    docker compose down
+    "${COMPOSE_CMD[@]}" down
 }
 
 # Restart the container
 restart-container() {
     echo "Restarting NixOS development container..."
-    docker compose restart
+    "${COMPOSE_CMD[@]}" restart
 }
 
 # View container logs
 logs-container() {
-    docker compose logs -f
+    "${COMPOSE_CMD[@]}" logs -f
 }
 
 # Clean up (removes container and volumes)
@@ -27,7 +30,7 @@ clean-container() {
     read -p "Are you sure? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        docker compose down -v
+        "${COMPOSE_CMD[@]}" down -v
         echo "✅ Container and volumes removed"
     fi
 }
@@ -35,16 +38,16 @@ clean-container() {
 # Rebuild the container
 rebuild-container() {
     echo "Rebuilding NixOS development container..."
-    docker compose build --no-cache
-    docker compose up -d
+    "${COMPOSE_CMD[@]}" build --no-cache
+    "${COMPOSE_CMD[@]}" up -d
 }
 
 # Show container status
 status-container() {
-    docker compose ps
+    "${COMPOSE_CMD[@]}" ps
     echo ""
     echo "Docker socket accessible:"
-    docker compose exec nixos-dev docker ps &>/dev/null && echo "✅ Yes" || echo "❌ No"
+    "${COMPOSE_CMD[@]}" exec nixos-dev docker ps &>/dev/null && echo "✅ Yes" || echo "❌ No"
     echo "Container name: nixos-dev-${COMPOSE_PROJECT_NAME}"
 }
 

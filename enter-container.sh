@@ -1,14 +1,16 @@
 #!/bin/bash
 # Helper script to enter the NixOS development container
 
-# Get the directory name for unique container naming
-export COMPOSE_PROJECT_NAME=$(basename "$PWD")
+set -e
 
-if ! docker ps | grep -q "nixos-dev-${COMPOSE_PROJECT_NAME}"; then
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE_CMD=(docker compose --project-directory "$SCRIPT_DIR")
+
+if ! "${COMPOSE_CMD[@]}" ps --status running --services | grep -q '^nixos-dev$'; then
     echo "Container is not running. Starting it..."
-    docker compose up -d
+    "${COMPOSE_CMD[@]}" up -d
     sleep 2
 fi
 
 echo "Entering NixOS development container..."
-docker compose exec --user dev nixos-dev /nix/var/nix/profiles/default/bin/bash -c "source ~/.bashrc && exec bash -i"
+"${COMPOSE_CMD[@]}" exec --user dev nixos-dev /nix/var/nix/profiles/default/bin/bash -c "source ~/.bashrc && exec bash -i"

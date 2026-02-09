@@ -9,7 +9,7 @@ services:
     # Mount Docker socket to use host's Docker from inside container
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./workspace:/workspace
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
       - nix-store:/nix
       - dev-home:/home/dev
       - ~/.ssh:/home/dev/.ssh:ro  # Mount SSH keys read-only for git
