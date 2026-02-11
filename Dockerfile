@@ -15,7 +15,9 @@ RUN chown -R root:root /nix/store /nix/var && \
 
 # Install additional packages (base image already has bash, git, openssh, coreutils)
 RUN nix profile install --profile /nix/var/nix/profiles/default \
+    nixpkgs#zstd \
     nixpkgs#util-linux \
+    nixpkgs#usbutils \
     nixpkgs#shadow \
     nixpkgs#vim \
     nixpkgs#htop \
@@ -114,7 +116,20 @@ export HOME=/home/dev\n\
 export USER=dev\n\
 export PATH=/nix/var/nix/profiles/default/bin:$PATH\n\
 \n\
-# Run interactive bash as dev user - use tail -f to keep container alive\n\
+# Ensure critical tools exist when persisted /nix volume is from older image\n\
+if ! command -v lsusb >/dev/null 2>&1; then\n\
+    echo "Installing missing usbutils (lsusb)..."\n\
+    export HOME=/root\n\
+    nix profile install --profile /nix/var/nix/profiles/default nixpkgs#usbutils\n\
+fi\n\
+\n\
+if ! command -v zstd >/dev/null 2>&1; then\n\
+    echo "Installing missing zstd..."\n\
+    export HOME=/root\n\
+    nix profile install --profile /nix/var/nix/profiles/default nixpkgs#zstd\n\
+fi\n\
+\n\
+# Keep container running\n\
 exec /nix/var/nix/profiles/default/bin/tail -f /dev/null\n' > /start.sh && \
     chmod +x /start.sh
 

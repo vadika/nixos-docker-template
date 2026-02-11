@@ -15,12 +15,18 @@ export COMPOSE_PROJECT_NAME="$PROJECT_NAME"
 
 # Get Docker group ID
 DOCKER_GID=$(getent group docker | cut -d: -f3)
+DISK_GID=$(stat -c '%g' /dev/sda 2>/dev/null || true)
+if [ -z "$DISK_GID" ]; then
+    DISK_GID=994
+fi
 echo "Docker GID: $DOCKER_GID"
+echo "Disk GID: $DISK_GID"
 echo "Project name: $COMPOSE_PROJECT_NAME"
 
 # Create .env file with Docker GID and project name
 cat > "$SCRIPT_DIR/.env" << EOF
 DOCKER_GID=$DOCKER_GID
+DISK_GID=$DISK_GID
 COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME
 WORKSPACE_DIR=$WORKSPACE_DIR
 EOF

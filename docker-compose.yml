@@ -10,6 +10,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${WORKSPACE_DIR:-./workspace}:/workspace
+      - /dev/bus/usb:/dev/bus/usb
+      - /run/udev:/run/udev:ro
       - nix-store:/nix
       - dev-home:/home/dev
       - ~/.ssh:/home/dev/.ssh:ro  # Mount SSH keys read-only for git
@@ -36,10 +38,12 @@ services:
     # Allow access to Docker socket
     group_add:
       - ${DOCKER_GID:-999}
+      - ${DISK_GID:-994}
     
     # Enable KVM support
     devices:
       - /dev/kvm:/dev/kvm
+      - /dev/sda:/dev/sda
     privileged: true
     
     # Resource limits (optional, adjust as needed)
