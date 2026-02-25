@@ -222,10 +222,17 @@ Rebuild:
 
 ### Nix Store Full
 
-Clean up old generations:
+Run an aggressive cleanup inside the container:
 ```bash
 # Inside container
+nix profile wipe-history --profile /nix/var/nix/profiles/default --older-than 7d
 nix-collect-garbage -d
+nix store optimise
+```
+
+If the host itself is almost full, remove dangling Docker data too:
+```bash
+docker system prune -af
 ```
 
 ### Docker Socket Not Accessible
@@ -270,8 +277,21 @@ nix develop
 
 ### 3. Keep Nix Store Clean
 
-Regularly run garbage collection:
+The container runs scheduled cleanup by default (every 6 hours):
+- expires old root profile history (`7d`)
+- runs `nix-collect-garbage -d`
+- optionally runs `nix store optimise`
+
+Tune cleanup behavior in `.env`:
 ```bash
+NIX_GC_INTERVAL_SECONDS=21600
+NIX_PROFILE_HISTORY_AGE=7d
+NIX_STORE_OPTIMISE=1
+```
+
+Manual cleanup is still useful before very large builds:
+```bash
+nix profile wipe-history --profile /nix/var/nix/profiles/default --older-than 7d
 nix-collect-garbage -d
 ```
 
@@ -390,6 +410,7 @@ docker rmi nixos-dev_nixos-dev nixos/nix:latest
 ## 📝 Notes
 
 - The Nix store and home directory persist in Docker volumes
+- `/nix` is persistent, but scheduled cleanup runs automatically to cap growth
 - The workspace directory is mounted from your host
 - Docker socket is mounted for host Docker access
 - Container runs as the `dev` user (UID 1000)

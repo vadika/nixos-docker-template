@@ -4,7 +4,10 @@ FROM nixos/nix:2.19.2
 RUN cp /etc/nix/nix.conf /etc/nix/nix.conf.tmp && \
     rm /etc/nix/nix.conf && \
     mv /etc/nix/nix.conf.tmp /etc/nix/nix.conf && \
-    echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+    echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf && \
+    echo "auto-optimise-store = true" >> /etc/nix/nix.conf && \
+    echo "min-free = 1073741824" >> /etc/nix/nix.conf && \
+    echo "max-free = 6442450944" >> /etc/nix/nix.conf
 
 # Fix Nix store permissions for multi-user installation
 RUN chown -R root:root /nix/store /nix/var && \
@@ -94,6 +97,7 @@ set -e\n\
 # Function for graceful shutdown\n\
 shutdown() {\n\
     echo "Shutting down..."\n\
+    kill -TERM $GC_PID 2>/dev/null || true\n\
     kill -TERM $NIX_DAEMON_PID 2>/dev/null || true\n\
     exit 0\n\
 }\n\
@@ -115,6 +119,30 @@ cd /workspace\n\
 export HOME=/home/dev\n\
 export USER=dev\n\
 export PATH=/nix/var/nix/profiles/default/bin:$PATH\n\
+\n\
+# Run periodic Nix cleanup to prevent unbounded /nix growth\n\
+cleanup_loop() {\n\
+    while true; do\n\
+        sleep "${NIX_GC_INTERVAL_SECONDS:-21600}"\n\
+        echo "Running scheduled Nix store cleanup..."\n\
+        export HOME=/root\n\
+        nix profile wipe-history --profile /nix/var/nix/profiles/default --older-than "${NIX_PROFILE_HISTORY_AGE:-7d}" >/dev/null 2>&1 || true\n\
+        nix-collect-garbage -d >/dev/null 2>&1 || true\n\
+        if [ "${NIX_STORE_OPTIMISE:-1}" = "1" ]; then\n\
+            nix store optimise >/dev/null 2>&1 || true\n\
+        fi\n\
+    done\n\
+}\n\
+cleanup_loop &\n\
+GC_PID=$!\n\
+\n\
+echo "Running startup Nix store cleanup..."\n\
+export HOME=/root\n\
+nix profile wipe-history --profile /nix/var/nix/profiles/default --older-than "${NIX_PROFILE_HISTORY_AGE:-7d}" >/dev/null 2>&1 || true\n\
+nix-collect-garbage -d >/dev/null 2>&1 || true\n\
+if [ "${NIX_STORE_OPTIMISE:-1}" = "1" ]; then\n\
+    nix store optimise >/dev/null 2>&1 || true\n\
+fi\n\
 \n\
 # Ensure critical tools exist when persisted /nix volume is from older image\n\
 if ! command -v lsusb >/dev/null 2>&1; then\n\

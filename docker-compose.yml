@@ -34,6 +34,9 @@ services:
     environment:
       - NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/nixos-25.11.tar.gz
       - DOCKER_HOST=unix:///var/run/docker.sock
+      - NIX_GC_INTERVAL_SECONDS=${NIX_GC_INTERVAL_SECONDS:-21600}
+      - NIX_PROFILE_HISTORY_AGE=${NIX_PROFILE_HISTORY_AGE:-7d}
+      - NIX_STORE_OPTIMISE=${NIX_STORE_OPTIMISE:-1}
     
     # Allow access to Docker socket
     group_add:
