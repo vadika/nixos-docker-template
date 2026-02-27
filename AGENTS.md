@@ -21,6 +21,21 @@ This file is the operational guide for AI coding agents working in the Ghaf repo
 - This repository is mounted at `/workspace/ghaf`; use `-w /workspace/ghaf` when invoking Compose commands that rely on the flake root.
 - Git commits should be created from inside the container (or with host hooks intentionally skipped) so pre-commit hooks are available.
 
+## SSH Access Relay (NetVM Jump)
+
+- In deployed debug images, VM services are typically reachable through NetVM first.
+- Public entrypoint: `ghaf@<netvm-lan-ip>` (example: `ghaf@192.168.68.116`).
+- Internal VM endpoints behind NetVM:
+  - host: `ghaf@192.168.100.2` (`ghaf-host`)
+  - admin-vm: `ghaf@192.168.100.5` (`admin-vm`)
+- Use OpenSSH jump/proxy from the development machine:
+  - `ssh -J ghaf@<netvm-lan-ip> ghaf@192.168.100.2`
+  - `ssh -J ghaf@<netvm-lan-ip> ghaf@192.168.100.5`
+- For non-interactive scripts, use `ProxyCommand` to avoid nested host-key prompts:
+  - `ssh -o "ProxyCommand=ssh -W %h:%p ghaf@<netvm-lan-ip>" ghaf@192.168.100.2`
+- When using `nixos-rebuild` helper tooling, set:
+  - `export NIX_SSHOPTS="-o ProxyJump=root@<netvm-lan-ip>"`
+
 ## Purpose
 
 - Ship correct, minimal, reviewable changes that follow Ghaf architecture and policy
