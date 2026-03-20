@@ -87,7 +87,8 @@ RUN echo "experimental-features = nix-command flakes" > /home/dev/.config/nix/ni
     echo "builders = ssh://vadikas@moobe x86_64-linux - 32 1 big-parallel,benchmark,kvm,nixos-test,uid-range ; ssh://vadikas@jetson aarch64-linux - 12 1 big-parallel,benchmark,nixos-test,uid-range" >> /etc/nix/nix.conf && \
     echo "builders-use-substitutes = true" >> /etc/nix/nix.conf && \
     echo "extra-substituters = http://moobe:5000" >> /etc/nix/nix.conf && \
-    echo "extra-trusted-public-keys = moobe-cache-1:/fXLJ3Mem9hM5UPqvs8v/9szerVSlbQMpSsWcZoHfy0=" >> /etc/nix/nix.conf
+    echo "extra-trusted-public-keys = moobe-cache-1:/fXLJ3Mem9hM5UPqvs8v/9szerVSlbQMpSsWcZoHfy0=" >> /etc/nix/nix.conf && \
+    echo "accept-flake-config = false" >> /etc/nix/nix.conf
 
 # Set up direnv and custom prompt for automatic environment loading
 RUN echo 'eval "$(direnv hook bash)"' >> /home/dev/.bashrc && \
