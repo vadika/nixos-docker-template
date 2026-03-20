@@ -20,6 +20,12 @@ services:
     # Keep container running
     tty: true
     stdin_open: true
+
+    # Raise file descriptor limits for large Nix evaluations/builds
+    ulimits:
+      nofile:
+        soft: ${NOFILE_SOFT:-65536}
+        hard: ${NOFILE_HARD:-1048576}
     
     # Health check to ensure nix-daemon is running
     healthcheck:
