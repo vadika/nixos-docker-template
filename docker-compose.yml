@@ -15,7 +15,6 @@ services:
       - nix-store:/nix
       - dev-home:/home/dev
       - ~/.ssh:/home/dev/.ssh:ro  # Mount SSH keys read-only for git
-      - ~/.ssh:/root/.ssh:ro  # Mount SSH keys for nix-daemon (remote builders)
       - ~/.gitconfig:/home/dev/.gitconfig:ro  # Mount git config for identity
     
     # Keep container running

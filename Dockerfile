@@ -109,6 +109,14 @@ shutdown() {\n\
 # Trap signals for graceful shutdown\n\
 trap shutdown SIGTERM SIGINT\n\
 \n\
+# Copy SSH keys for root (nix daemon) with correct ownership/permissions\n\
+if [ -d /home/dev/.ssh ]; then\n\
+    cp -a /home/dev/.ssh /root/.ssh\n\
+    chown -R root:root /root/.ssh\n\
+    chmod 700 /root/.ssh\n\
+    chmod 600 /root/.ssh/* 2>/dev/null || true\n\
+fi\n\
+\n\
 echo "Starting Nix daemon..."\n\
 export HOME=/root\n\
 nix-daemon &\n\
