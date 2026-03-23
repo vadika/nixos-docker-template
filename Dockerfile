@@ -84,15 +84,17 @@ RUN mkdir -p /workspace && \
 RUN echo "experimental-features = nix-command flakes" > /home/dev/.config/nix/nix.conf && \
     chown dev:dev /home/dev/.config/nix/nix.conf && \
     echo "trusted-users = root dev" >> /etc/nix/nix.conf && \
-    echo "builders = ssh://vadikas@moobe x86_64-linux - 16 1 big-parallel,benchmark,kvm,nixos-test,uid-range ; ssh://vadikas@jetson aarch64-linux - 12 1 big-parallel,benchmark,nixos-test,uid-range" >> /etc/nix/nix.conf && \
+    echo "builders = ssh://vadikas@moobe x86_64-linux - 8 1 big-parallel,benchmark,kvm,nixos-test,uid-range ; ssh://vadikas@jetson aarch64-linux - 12 1 big-parallel,benchmark,nixos-test,uid-range" >> /etc/nix/nix.conf && \
     echo "builders-use-substitutes = true" >> /etc/nix/nix.conf && \
+    echo "cores = 4" >> /etc/nix/nix.conf && \
     echo "extra-substituters = http://moobe:5000" >> /etc/nix/nix.conf && \
     echo "extra-trusted-public-keys = moobe-cache-1:/fXLJ3Mem9hM5UPqvs8v/9szerVSlbQMpSsWcZoHfy0=" >> /etc/nix/nix.conf && \
     echo "accept-flake-config = false" >> /etc/nix/nix.conf
 
 # Set up direnv and custom prompt for automatic environment loading
 RUN echo 'eval "$(direnv hook bash)"' >> /home/dev/.bashrc && \
-    echo 'export PS1="[\u@nixos-dev \W]\\$ "' >> /home/dev/.bashrc && \
+    echo 'parse_git_branch() { git branch 2>/dev/null | sed -n "s/* \(.*\)/ (\1)/p"; }' >> /home/dev/.bashrc && \
+    echo 'export PS1="[\u@nixos-dev \W\$(parse_git_branch)]\\$ "' >> /home/dev/.bashrc && \
     chown dev:dev /home/dev/.bashrc
 
 # Create a startup script with proper signal handling
