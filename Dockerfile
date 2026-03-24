@@ -112,6 +112,10 @@ shutdown() {\n\
 # Trap signals for graceful shutdown\n\
 trap shutdown SIGTERM SIGINT\n\
 \n\
+# Create SSH control socket directory (used by ControlPath in ssh config)\n\
+mkdir -p /tmp/.ssh-sockets\n\
+chmod 1777 /tmp/.ssh-sockets\n\
+\n\
 # Copy SSH keys for root (nix daemon) with correct ownership/permissions\n\
 if [ -d /home/dev/.ssh ]; then\n\
     cp -a /home/dev/.ssh /root/.ssh\n\

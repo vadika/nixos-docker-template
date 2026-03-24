@@ -14,8 +14,9 @@ Dockerfile-
 # Workspace (will be mounted as volume)
 workspace/
 
-# Scripts (not needed in image)
+# Scripts (not needed in image, except dashboard)
 *.sh
+!nix-dashboard.sh
 
 # Documentation
 README.md

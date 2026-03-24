@@ -16,6 +16,7 @@ services:
       - dev-home:/home/dev
       - ~/.ssh:/home/dev/.ssh:ro  # Mount SSH keys read-only for git
       - ~/.gitconfig:/home/dev/.gitconfig:ro  # Mount git config for identity
+      - ./nix-dashboard.sh:/usr/local/bin/nix-dashboard:ro  # Build dashboard
     
     # Keep container running
     tty: true
