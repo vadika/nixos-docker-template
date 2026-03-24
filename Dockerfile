@@ -120,6 +120,11 @@ if [ -d /home/dev/.ssh ]; then\n\
     chmod 600 /root/.ssh/* 2>/dev/null || true\n\
 fi\n\
 \n\
+# OpenSSH control sockets in the mounted config use /tmp/.ssh-sockets.\n\
+mkdir -p /tmp/.ssh-sockets\n\
+chown dev:dev /tmp/.ssh-sockets\n\
+chmod 700 /tmp/.ssh-sockets\n\
+\n\
 echo "Starting Nix daemon..."\n\
 export HOME=/root\n\
 nix-daemon &\n\
