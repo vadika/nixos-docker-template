@@ -5,8 +5,8 @@ set -euo pipefail
 # --- Config ---
 STATS_DIR="${NIX_DASHBOARD_DIR:-/home/dev/.nix-dashboard}"
 STATS_LOG="$STATS_DIR/build-log.jsonl"
-CACHE_URL="${NIX_CACHE_URL:-http://moobe:5000}"
-REMOTE_BUILDERS=("moobe" "jetson")
+CACHE_URL="${NIX_CACHE_URL:-http://artemis2:5000}"
+REMOTE_BUILDERS=("artemis2")
 
 # --- Colors ---
 RED='\033[0;31m'
@@ -374,7 +374,7 @@ case "${1:-status}" in
         echo
         echo "Environment:"
         echo "  NIX_DASHBOARD_DIR   Stats directory (default: /home/dev/.nix-dashboard)"
-        echo "  NIX_CACHE_URL       Binary cache URL (default: http://moobe:5000)"
+        echo "  NIX_CACHE_URL       Binary cache URL (default: http://artemis2:5000)"
         ;;
     *)
         echo "Unknown command: $1 (try 'nix-dashboard help')"

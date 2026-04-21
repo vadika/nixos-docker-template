@@ -4,108 +4,63 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @../AGENTS.md
 
-## What Is Ghaf
+## What This Repo Is
 
-Ghaf Framework is a Nix Flakes-based security framework that compartmentalizes applications into isolated VMs on edge devices. Targets x86_64 (laptops) and aarch64 (NVIDIA Jetson Orin). Built entirely with NixOS modules composed via flake-parts.
+A Docker-based NixOS development container. The container itself is the product — it gives you a full Nix environment (flakes enabled, host Docker access, KVM/USB passthrough, remote builders pre-wired) so you can develop Nix projects without polluting the host. The default use case is Ghaf development: clone Ghaf into `workspace/` and run `nix build` from inside the container.
 
-## Build Commands
+This repo contains **no Nix code of its own** — no `flake.nix`, no `lib/`, no `modules/`. If you're looking for Ghaf's build targets or module definitions, they live inside `workspace/ghaf` once cloned. Changes here are to the container image, compose wiring, or tooling scripts.
 
-All builds use Nix. No Makefile. Nix is available inside the Docker Compose `nixos-dev` service (see AGENTS.md for container usage).
+## Layout
 
+- `Dockerfile` — builds on `nixos/nix:2.19.2`, installs tool set via `nix profile install`, creates `dev` user (UID 1000) with passwordless sudo, writes `/etc/nix/nix.conf` with remote builders + cache, embeds `/start.sh` (nix-daemon + periodic GC loop).
+- `docker-compose.yml` — one service `nixos-dev`. Mounts host Docker socket, `workspace/`, `~/.ssh` (ro), `~/.gitconfig` (ro), `/dev/bus/usb`, `/run/udev`. Named volumes `nix-store` (`/nix`) and `dev-home` persist across rebuilds. Runs privileged for KVM.
+- `setup.sh` — one-time bootstrap. Writes `.env` with `DOCKER_GID`, `DISK_GID`, `COMPOSE_PROJECT_NAME`, `WORKSPACE_DIR`, then builds the image.
+- `enter-container.sh` — idempotent entry: starts compose if needed, tops up `usbutils`/`zstd` in the persistent `/nix` volume if missing (older image versions), exec's into a login bash as `dev`.
+- `nix-dashboard.sh` — mounted into the container at `/usr/local/bin/nix-dashboard`. Subcommands: `status` (store size, cache reachability, builder liveness), `build <args>` (wraps `nix build`, logs build vs substitute counts to `~/.nix-dashboard/build-log.jsonl`), `history [N]`, `dry-run`.
+- `BUILDERS.md` — SSH multiplexing setup for remote builders, cross-compile cache-miss explanation.
+
+## Common Commands
+
+**First-time setup (host):**
 ```bash
-# Enter devshell (provides treefmt, reuse, nix-fast-build, etc.)
-nix develop
-
-# Format check (pre-commit runs this automatically)
-nix fmt -- --fail-on-change
-
-# License compliance
-nix develop --command reuse lint
-
-# Build pre-commit checks (CI parity)
-nix build .#checks.x86_64-linux.pre-commit
-
-# Evaluate all outputs (catches module errors without building)
-nix flake show --all-systems
-
-# Build a specific target
-nix build .#generic-x86_64-debug
-nix build .#nvidia-jetson-orin-agx-debug
-nix build .#nvidia-jetson-orin-agx-debug-from-x86_64          # cross-compiled image
-nix build .#nvidia-jetson-orin-agx-debug-from-x86_64-flash-script  # flash script
-
-# Build docs
-nix build .#doc
+./setup.sh                 # writes .env, builds image
+docker compose up -d
+./enter-container.sh       # or: docker compose exec --user dev nixos-dev bash
 ```
 
-Builds are slow (45 min to 3+ hours). Use `ghaf-dev.cachix.org` substituter (configured in flake.nix). Never cancel long-running builds.
-
-## Architecture
-
-```
-flake.nix                          # Top-level: inputs, nixConfig, flake-parts imports
-├── lib/builders/                  # mkGhafConfiguration, mkGhafInstaller — core builders
-│   └── mkGhafConfiguration.nix   #   Takes: name, system, profile, hardwareModule, variant, extraModules, vmConfig
-├── lib/default.nix                # Extends nixpkgs.lib with ghaf types (globalConfig, networking, policy)
-├── lib/global-config.nix          # Debug/release/minimal profile definitions
-├── modules/flake-module.nix       # Imports all NixOS modules under ghaf.* namespace
-│   ├── common/                    #   Shared: networking, firewall, security, users, logging
-│   ├── microvm/                   #   VM base configs: guivm, netvm, audiovm, etc.
-│   ├── hardware/                  #   Hardware abstractions
-│   ├── profiles/                  #   System profiles (debug, release, laptop-x86, orin)
-│   ├── reference/                 #   Reference hardware implementations
-│   ├── givc/                      #   Inter-VM communication
-│   └── desktop/                   #   Desktop environment configs
-├── targets/                       # Hardware targets using mkGhafConfiguration
-│   ├── laptop/flake-module.nix    #   x86 laptops (Lenovo, Dell, System76, Alienware)
-│   ├── nvidia-jetson-orin/        #   Jetson Orin AGX/NX targets
-│   └── generic-x86_64/           #   Generic x86 debug/release
-├── packages/                      # Custom packages (pkgs-by-name/ structure)
-├── overlays/                      # Cross-compilation and package fix overlays
-├── nix/                           # devshell, treefmt, pre-commit hooks, nixpkgs settings
-└── tests/                         # Flake checks (installer, logging, firewall)
+**Rebuild image after Dockerfile changes:**
+```bash
+docker compose build --no-cache nixos-dev
+docker compose up -d --force-recreate
 ```
 
-### Composition Pattern
+**Run a one-shot command inside the container (from host):**
+```bash
+docker compose exec --user dev nixos-dev bash -lc "nix --version"
+docker compose exec --user dev -w /workspace/ghaf nixos-dev bash -lc "nix build .#generic-x86_64-debug"
+```
+`-w /workspace/ghaf` sets cwd to the Ghaf flake root. `-lc` gives a login shell so the nix profile and direnv are loaded.
 
-Targets use `mkGhafConfiguration` which takes a hardware module + profile + extra modules and produces a NixOS configuration with VM compartments. Each target's `flake-module.nix` exports `packages` and `nixosConfigurations`.
+**Cleanup (inside container, runs automatically every 6h via `/start.sh`):**
+```bash
+nix profile wipe-history --profile /nix/var/nix/profiles/default --older-than 7d
+nix-collect-garbage -d
+nix store optimise
+```
+Tune via `NIX_GC_INTERVAL_SECONDS`, `NIX_PROFILE_HISTORY_AGE`, `NIX_STORE_OPTIMISE` in `.env`.
 
-Options live under `ghaf.*` namespace. Use `lib.mkEnableOption` for feature flags, `lib.mkIf` for conditional config, `lib.mkDefault` for overridable defaults.
+## Things That Will Bite You
 
-VM configurations use `globalConfig` and `hostConfig` patterns for cross-VM data sharing.
+- **SSH control sockets must live under `/tmp/.ssh-sockets/`, not `~/.ssh/sockets/`.** `~/.ssh` is bind-mounted read-only from the host. `/start.sh` recreates `/tmp/.ssh-sockets/` on every container start since `/tmp` is ephemeral. SSH multiplexing matters: without it each builder handshake is ~4s (see `BUILDERS.md`).
+- **Remote builder is hardcoded in the Dockerfile** at line 87: `ssh://vadikas@artemis2` (x86_64 only — no aarch64 builder). Extra substituter is `http://artemis2:5000` with key `artemis2-cache-1:...`. Changing these requires rebuilding the image. See `BUILDERS.md` for the artemis2 server-side setup.
+- **Persistent `/nix` volume outlives image rebuilds.** If you bump the Dockerfile's `nix profile install` list, existing containers won't have the new tools. `enter-container.sh` tops up `usbutils` and `zstd` defensively; extend that pattern for anything else critical, or `docker volume rm ...nix-store` to force a clean slate.
+- **`.env` is generated by `setup.sh` and gitignored.** `DOCKER_GID` and `DISK_GID` are host-specific — don't commit them. `COMPOSE_PROJECT_NAME` controls the container name/hostname suffix, defaulting to `ghaf-hostname-patch`.
+- **`NIX_PATH` in `docker-compose.yml` is pinned to `nixos-25.11`**, but the base image ships `nixos/nix:2.19.2`. Flakes ignore `NIX_PATH`; legacy `nix-shell -p` does not. Keep that in mind when debugging substitution issues.
+- **Container runs privileged** (needed for `/dev/kvm` + `/dev/sda` device passthrough). Treat it accordingly; host Docker socket is also mounted, so anything inside can control host Docker.
 
-## Formatting and Linting
+## Scope Rules for Edits Here
 
-Treefmt handles all formatting (runs via pre-commit hook on `git commit`):
-- **Nix**: nixfmt (RFC 166), deadnix, statix
-- **Python**: ruff
-- **Bash**: shellcheck, shfmt
-- **JS**: prettier
-- **GitHub Actions**: actionlint
-
-## File Conventions
-
-- SPDX headers required on all new files:
-  ```nix
-  # SPDX-FileCopyrightText: 2022-2026 TII (SSRC) and the Ghaf contributors
-  # SPDX-License-Identifier: Apache-2.0
-  ```
-  (Use `CC-BY-SA-4.0` for documentation files)
-- Include `_file = ./<filename>.nix;` in NixOS modules for better eval traces
-- File names: kebab-case (`feature-name.nix`)
-- Commit messages: Linux-kernel-style imperative subject, optional body explaining what/why
-
-## Key Flake Inputs
-
-- `nixpkgs` (nixos-unstable), `flake-parts`, `jetpack-nixos` (Orin support)
-- `ghafpkgs` (Ghaf-specific packages), `givc` (inter-VM communication)
-- `microvm` (VM infrastructure), `disko` (disk partitioning)
-
-## Validation Workflow
-
-Smallest set that catches regressions for your change:
-1. `nix fmt -- --fail-on-change` — always
-2. `nix develop --command reuse lint` — always for new/renamed files
-3. `nix flake show --all-systems` — for module/target/flake changes
-4. `nix build .#checks.x86_64-linux.pre-commit` — CI parity
-5. Target-specific build — when touching hardware/target code
+- Image/tooling changes: `Dockerfile`, `docker-compose.yml`, `setup.sh`, `enter-container.sh`.
+- Dev-ex scripts that run inside the container: mount them via `docker-compose.yml` (see `nix-dashboard.sh` for the pattern) rather than baking into the image, so changes don't need an image rebuild.
+- Do **not** add a `flake.nix` here — this repo is the container, not a Nix project. Nix code belongs in `workspace/<project>`.
+- Shell scripts: `shellcheck` clean, `set -euo pipefail` where practical (see `nix-dashboard.sh`).
