@@ -10,7 +10,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${WORKSPACE_DIR:-./workspace}:/workspace
-      - /dev/bus/usb:/dev/bus/usb
+      - /dev:/dev  # Full /dev so hot-plugged USB-serial / recovery devices propagate live
       - /run/udev:/run/udev:ro
       - nix-store:/nix
       - dev-home:/home/dev
@@ -49,6 +49,7 @@ services:
     group_add:
       - ${DOCKER_GID:-999}
       - ${DISK_GID:-994}
+      - ${TTY_GID:-985}  # Host uucp/dialout gid - serial device (/dev/ttyUSB*) access
     
     # Enable KVM support
     devices:
